@@ -1,5 +1,3 @@
-# coding: utf-8
-
 import struct, os, cPickle
 from scipy.io import loadmat
 from collections import defaultdict
@@ -72,15 +70,15 @@ def read_vbb(path):
                 obj['occl'][0], obj['lock'][0], obj['posv'][0]):
                 keys = obj.dtype.names
                 id = int(id[0][0]) - 1  # MATLAB is 1-origin
-                pos = pos[0].tolist()
+                pos = [i - 1 for i in pos[0].tolist()]  # MATLAB is 1-origin
                 occl = int(occl[0][0])
                 lock = int(lock[0][0])
                 posv = posv[0].tolist()
 
                 datum = dict(zip(keys, [id, pos, occl, lock, posv]))
                 datum['lbl'] = str(objLbl[datum['id']])
-                datum['str'] = int(objStr[datum['id']])
-                datum['end'] = int(objEnd[datum['id']])
+                datum['str'] = int(objStr[datum['id']]) - 1  # MATLAB is 1-origin
+                datum['end'] = int(objEnd[datum['id']]) - 1  # MATLAB is 1-origin
                 datum['hide'] = int(objHide[datum['id']])
                 datum['init'] = int(objInit[datum['id']])
 
@@ -89,26 +87,27 @@ def read_vbb(path):
     return data
 
 
-dir_path = './'
-anno = defaultdict(dict)
+if __name__ == '__main__':
+    dir_path = './'
+    anno = defaultdict(dict)
 
-#  convert .seq file into .jpg
-for i in range(11):
-    anno['%.2d' % i] = defaultdict(dict)
-    for j in os.listdir(dir_path + 'set%.2d' % i):
-        data_path = dir_path + 'set%.2d/' % i + j
-        if i < 6:
-            read_seq(data_path, dir_path + 'train/')
-        else:
-            read_seq(data_path, dir_path + 'test/')
+    #  convert .seq file into .jpg
+    for i in range(11):
+        anno['%.2d' % i] = defaultdict(dict)
+        for j in os.listdir(dir_path + 'set%.2d' % i):
+            data_path = dir_path + 'set%.2d/' % i + j
+            if i < 6:
+                read_seq(data_path, dir_path + 'train/')
+            else:
+                read_seq(data_path, dir_path + 'test/')
 
 
-# convert .vbb file into .pkl
-for i in range(11):
-    anno['%.2d' % i] = defaultdict(dict)
-    for k in os.listdir(dir_path + 'annotations/set%.2d' % i):
-        anno_path = dir_path + 'annotations/set%.2d/' % i + k
-        anno['%.2d' % i][k[2:4]] = read_vbb(anno_path)
+    # convert .vbb file into .pkl
+    for i in range(11):
+        anno['%.2d' % i] = defaultdict(dict)
+        for k in os.listdir(dir_path + 'annotations/set%.2d' % i):
+            anno_path = dir_path + 'annotations/set%.2d/' % i + k
+            anno['%.2d' % i][k[2:4]] = read_vbb(anno_path)
 
-with open(dir_path + 'annotations.pkl', 'wb') as f:
-    cPickle.dump(anno, f)
+    with open(dir_path + 'annotations.pkl', 'wb') as f:
+        cPickle.dump(anno, f)
