@@ -1,9 +1,16 @@
-import struct, os, cPickle
+# This script converts .seq files into .jpg files, .vbb files into .pkl files
+# from Caltech Pedestrian Dataset
+# Based on Python 2.7
+# Author: Peng Zhang
+# E-mail: hizhangp@mail.ustc.edu.cn
+# Caltech Pedestrian Dataset: http://www.vision.caltech.edu/Image_Datasets/CaltechPedestrians/
+
+import struct, os, cPickle, time
 from scipy.io import loadmat
 from collections import defaultdict
 
 
-def read_seq(path, save):
+def read_seq(path):
     def read_header(ifile):
         feed = ifile.read(4)
         norpix = ifile.read(24)
@@ -20,10 +27,12 @@ def read_seq(path, save):
                 'size':params[4], 'true_size':params[8],
                 'num_frames':params[6]}
 
+    assert path[-3:] == 'seq', path
     ifile = open(path, 'rb')
     params = read_header(ifile)
     bytes = open(path, 'rb').read()
 
+    imgs = []
     extra = 8
     s = 1024
     for i in range(params['num_frames']):
@@ -37,12 +46,13 @@ def read_seq(path, save):
             else:
                 extra += 8
                 s += 8
+        imgs.append(I)
 
-        filename = save + 'img' + path[33:35] + path[38:40] + '%.4d.jpg' % i
-        open(filename, 'wb+').write(I)
+    return imgs
 
 
 def read_vbb(path):
+    assert path[-3:] == 'vbb'
     vbb = loadmat(path)
     nFrame = int(vbb['A'][0][0][0][0][0])
     objLists = vbb['A'][0][0][1][0]
@@ -70,7 +80,8 @@ def read_vbb(path):
                 obj['occl'][0], obj['lock'][0], obj['posv'][0]):
                 keys = obj.dtype.names
                 id = int(id[0][0]) - 1  # MATLAB is 1-origin
-                pos = [i - 1 for i in pos[0].tolist()]  # MATLAB is 1-origin
+                p = pos[0].tolist()
+                pos = [p[0] - 1, p[1] - 1, p[2], p[3]]  # MATLAB is 1-origin
                 occl = int(occl[0][0])
                 lock = int(lock[0][0])
                 posv = posv[0].tolist()
@@ -88,26 +99,55 @@ def read_vbb(path):
 
 
 if __name__ == '__main__':
+    # directory to store data
     dir_path = './'
-    anno = defaultdict(dict)
+    # phase can be 'train_', 'test_' or 'val_'
+    phase = ''
+    # num ranges from 0~11
+    num = [0, 11]
+
+    time_flag = time.time()
+    img_save_path = os.path.join(dir_path, phase + 'images')
+    anno_save_path = os.path.join(dir_path, phase + 'annotations.pkl')
+    if os.path.exists(img_save_path):
+        raise KeyError('Already exists : {}'.format(img_save_path))
+    else:
+        os.mkdir(img_save_path)
+    print 'Images will be saved to {}'.format(img_save_path)
+    print 'Annotations will be saved to {}'.format(anno_save_path)
 
     #  convert .seq file into .jpg
-    for i in range(11):
-        anno['%.2d' % i] = defaultdict(dict)
-        for j in os.listdir(dir_path + 'set%.2d' % i):
-            data_path = dir_path + 'set%.2d/' % i + j
-            if i < 6:
-                read_seq(data_path, dir_path + 'train/')
-            else:
-                read_seq(data_path, dir_path + 'test/')
+    for i in range(num[0], num[1]):
+        img_set_path = os.path.join(dir_path, 'set{:02}'.format(i))
+        assert os.path.exists(img_set_path), 'Not exists: '.format(img_set_path)
+        print 'Extracting images from set{:02} ...'.format(i)
+        for j in sorted(os.listdir(img_set_path)):
+            imgs_path = os.path.join(img_set_path, j)
+            imgs = read_seq(imgs_path)
+            for ix, img in enumerate(imgs):
+                img_name = 'img{:02}{}{:04}.jpg'.format(i, j[2:4], ix)
+                img_path = os.path.join(img_save_path, img_name)
+                open(img_path, 'wb+').write(img)
 
+    print 'Images have been saved.'
 
     # convert .vbb file into .pkl
-    for i in range(11):
-        anno['%.2d' % i] = defaultdict(dict)
-        for k in os.listdir(dir_path + 'annotations/set%.2d' % i):
-            anno_path = dir_path + 'annotations/set%.2d/' % i + k
-            anno['%.2d' % i][k[2:4]] = read_vbb(anno_path)
+    # example: anno['00']['00']['frames'][0][0]['pos']
+    anno = defaultdict(dict)
+    for i in range(num[0], num[1]):
+        anno['{:02}'.format(i)] = defaultdict(dict)
+        anno_set_path = os.path.join(dir_path, 'annotations', \
+                                     'set{:02}'.format(i))
+        assert os.path.exists(anno_set_path), \
+                'Not exists: '.format(anno_set_path)
+        print 'Extracting annotations from set{:02} ...'.format(i)
+        for j in sorted(os.listdir(anno_set_path)):
+            anno_path = os.path.join(anno_set_path, j)
+            anno['{:02}'.format(i)][j[2:4]] = read_vbb(anno_path)
 
-    with open(dir_path + 'annotations.pkl', 'wb') as f:
+    with open(anno_save_path, 'wb') as f:
         cPickle.dump(anno, f)
+
+    print 'Annotations have been saved.'
+
+    print 'Done, time spends: {}s'.format(int(time.time() - time_flag))
