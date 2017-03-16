@@ -5,7 +5,7 @@
 # from Caltech Pedestrian Dataset
 # Based on Python 2.7
 # Author: Peng Zhang
-# E-mail: hizhangp@mail.ustc.edu.cn
+# E-mail: hizhangp@gmail.com
 # Caltech Pedestrian Dataset:
 # http://www.vision.caltech.edu/Image_Datasets/CaltechPedestrians/
 
