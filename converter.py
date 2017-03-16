@@ -1,5 +1,5 @@
 #!/usr/bin/python
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 
 # This script converts .seq files into .jpg files, .vbb files into .pkl files
 # from Caltech Pedestrian Dataset
