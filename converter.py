@@ -1,11 +1,18 @@
+#!/usr/bin/python
+# -*- coding: utf8 -*-
+
 # This script converts .seq files into .jpg files, .vbb files into .pkl files
 # from Caltech Pedestrian Dataset
 # Based on Python 2.7
 # Author: Peng Zhang
 # E-mail: hizhangp@mail.ustc.edu.cn
-# Caltech Pedestrian Dataset: http://www.vision.caltech.edu/Image_Datasets/CaltechPedestrians/
+# Caltech Pedestrian Dataset:
+# http://www.vision.caltech.edu/Image_Datasets/CaltechPedestrians/
 
-import struct, os, cPickle, time
+import struct
+import os
+import cPickle
+import time
 from scipy.io import loadmat
 from collections import defaultdict
 
@@ -21,11 +28,11 @@ def read_seq(path):
         params = [struct.unpack('@i', ifile.read(4))[0] for i in range(9)]
         fps = struct.unpack('@d', ifile.read(8))
         ifile.read(432)
-        image_ext = {100:'raw', 102:'jpg', 201:'jpg', 1:'png', 2:'png'}
-        return {'w':params[0], 'h':params[1], 'bdepth':params[2],
-                'ext':image_ext[params[5]], 'format':params[5],
-                'size':params[4], 'true_size':params[8],
-                'num_frames':params[6]}
+        image_ext = {100: 'raw', 102: 'jpg', 201: 'jpg', 1: 'png', 2: 'png'}
+        return {'w': params[0], 'h': params[1], 'bdepth': params[2],
+                'ext': image_ext[params[5]], 'format': params[5],
+                'size': params[4], 'true_size': params[8],
+                'num_frames': params[6]}
 
     assert path[-3:] == 'seq', path
     ifile = open(path, 'rb')
@@ -36,11 +43,11 @@ def read_seq(path):
     extra = 8
     s = 1024
     for i in range(params['num_frames']):
-        tmp = struct.unpack_from('@I', bytes[s:s+4])[0]
-        I = bytes[s+4:s+tmp]
+        tmp = struct.unpack_from('@I', bytes[s:s + 4])[0]
+        I = bytes[s + 4:s + tmp]
         s += tmp + extra
         if i == 0:
-            val = struct.unpack_from('@B', bytes[s:s+1])[0]
+            val = struct.unpack_from('@B', bytes[s:s + 1])[0]
             if val != 0:
                 s -= 4
             else:
@@ -76,8 +83,11 @@ def read_vbb(path):
 
     for frame_id, obj in enumerate(objLists):
         if len(obj) > 0:
-            for id, pos, occl, lock, posv in zip(obj['id'][0], obj['pos'][0],
-                obj['occl'][0], obj['lock'][0], obj['posv'][0]):
+            for id, pos, occl, lock, posv in zip(obj['id'][0],
+                                                 obj['pos'][0],
+                                                 obj['occl'][0],
+                                                 obj['lock'][0],
+                                                 obj['posv'][0]):
                 keys = obj.dtype.names
                 id = int(id[0][0]) - 1  # MATLAB is 1-origin
                 p = pos[0].tolist()
@@ -88,8 +98,10 @@ def read_vbb(path):
 
                 datum = dict(zip(keys, [id, pos, occl, lock, posv]))
                 datum['lbl'] = str(objLbl[datum['id']])
-                datum['str'] = int(objStr[datum['id']]) - 1  # MATLAB is 1-origin
-                datum['end'] = int(objEnd[datum['id']]) - 1  # MATLAB is 1-origin
+                # MATLAB is 1-origin
+                datum['str'] = int(objStr[datum['id']]) - 1
+                # MATLAB is 1-origin
+                datum['end'] = int(objEnd[datum['id']]) - 1
                 datum['hide'] = int(objHide[datum['id']])
                 datum['init'] = int(objInit[datum['id']])
 
@@ -119,7 +131,8 @@ if __name__ == '__main__':
     #  convert .seq file into .jpg
     for i in range(num[0], num[1]):
         img_set_path = os.path.join(dir_path, 'set{:02}'.format(i))
-        assert os.path.exists(img_set_path), 'Not exists: '.format(img_set_path)
+        assert os.path.exists(
+            img_set_path), 'Not exists: '.format(img_set_path)
         print 'Extracting images from set{:02} ...'.format(i)
         for j in sorted(os.listdir(img_set_path)):
             imgs_path = os.path.join(img_set_path, j)
@@ -136,10 +149,10 @@ if __name__ == '__main__':
     anno = defaultdict(dict)
     for i in range(num[0], num[1]):
         anno['{:02}'.format(i)] = defaultdict(dict)
-        anno_set_path = os.path.join(dir_path, 'annotations', \
+        anno_set_path = os.path.join(dir_path, 'annotations',
                                      'set{:02}'.format(i))
         assert os.path.exists(anno_set_path), \
-                'Not exists: '.format(anno_set_path)
+            'Not exists: '.format(anno_set_path)
         print 'Extracting annotations from set{:02} ...'.format(i)
         for j in sorted(os.listdir(anno_set_path)):
             anno_path = os.path.join(anno_set_path, j)
